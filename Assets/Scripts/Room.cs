@@ -8,56 +8,94 @@ public class Room
     // The 1D grid indices which the room occupies
     public List<int> gridIds = new List<int>();
 
-    public Room(int id, int startingGridId) {
+    public Room(int id, int startingGridId)
+    {
         roomId = id;
         gridIds.Add(startingGridId);
     }
 
-    // Start is called before the first frame update
-    void Start()
+    // Look at this cells 4 neighbors and return their ids if not the same room
+    public List<int> GetAdjacentGridIds(int gridId)
     {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    public List<int> GetAdjacentGridIds() {
         HashSet<int> adjRooms = new HashSet<int>();
         int gridSize = RoomGenerator.Instance.GetGridSize();
-        // Brute force all 4 sides of each room
-        for (int i = 0; i < gridIds.Count; i++) {
-            int currId = gridIds[i];
-            // Add all 4 directions if they are inside of the grid
-            // UP check
-            if (currId - gridSize >= 0) {
-                if (!gridIds.Contains(currId - gridSize)) {
-                    adjRooms.Add(currId - gridSize);
-                }
-            }
-            // DOWN check
-            if (currId + gridSize < gridSize * gridSize) {
-                if (!gridIds.Contains(currId + gridSize)) {
-                    adjRooms.Add(currId + gridSize);
-                }
-            }
-            // RIGHT check
-            if ((currId + 1) % gridSize != 0) {
-                if (!gridIds.Contains(currId + 1)) {
-                    adjRooms.Add(currId + 1);
-                }
-            }
-            // LEFT check
-            if (currId % gridSize != 0) {
-                if (!gridIds.Contains(currId - 1)) {
-                    adjRooms.Add(currId - 1);
-                }
+        if (gridId - gridSize >= 0)
+        {
+            if (!gridIds.Contains(gridId - gridSize))
+            {
+                adjRooms.Add(gridId - gridSize);
             }
         }
+        // DOWN check
+        else if (gridId + gridSize < gridSize * gridSize)
+        {
+            if (!gridIds.Contains(gridId + gridSize))
+            {
+                adjRooms.Add(gridId + gridSize);
+            }
+        }
+        // RIGHT check
+        else if ((gridId + 1) % gridSize != 0)
+        {
+            if (!gridIds.Contains(gridId + 1))
+            {
+                adjRooms.Add(gridId + 1);
+            }
+        }
+        // LEFT check
+        else if (gridId % gridSize != 0)
+        {
+            if (!gridIds.Contains(gridId - 1))
+            {
+                adjRooms.Add(gridId - 1);
+            }
+        }
+        return new List<int>(adjRooms);
+    }
 
-        return new List<int>(adjRooms);    
+    // Get all gridIds of neighboringRooms (forming a border around the room)
+    public List<int> GetRoomBorderGridIds()
+    {
+        HashSet<int> adjRooms = new HashSet<int>();
+        for (int i = 0; i < gridIds.Count; i++)
+        {
+            int currId = gridIds[i];
+            foreach (int roomId in GetAdjacentGridIds(currId))
+            {
+                adjRooms.Add(roomId);
+            }
+        }
+        return new List<int>(adjRooms);
+    }
+
+    // Gets a vector offset of the second room from the first, essentailly getting the room's direction
+    // Assumes room ids are valid and that the rooms are adjacent
+    public Vector3 GetRoomOffset(int originalId, int offsetRoom)
+    {
+        int gridSize = RoomGenerator.Instance.GetGridSize();
+        int roomSize = RoomGenerator.Instance.GetRoomSize();
+        // UP check
+        if (offsetRoom - originalId == -gridSize)
+        {
+            return Vector3.left * roomSize;
+        }
+        // DOWN check
+        else if (offsetRoom - originalId == gridSize)
+        {
+            return Vector3.right * roomSize;
+        }
+        // RIGHT check
+        else if (offsetRoom - originalId == 1)
+        {
+            return Vector3.forward * roomSize;
+        }
+        // LEFT check
+        else if (offsetRoom - originalId == -1)
+        {
+            return Vector3.back * roomSize;
+        }
+        else {
+            return Vector3.zero;
+        }
     }
 }
