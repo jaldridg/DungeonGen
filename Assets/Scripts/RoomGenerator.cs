@@ -8,17 +8,21 @@ using UnityEngine;
 public class RoomGenerator : MonoBehaviour
 {
     [SerializeField] float deadRoomChance = 0.5f;
+    [SerializeField] float doorChance = 0.5f;
     [SerializeField] public int gridSize = 10;
     [SerializeField] public int roomSize = 5;
     // Stores the room ids which belong to the locations in the grid
     private int[,] grid;
 
-    private static int nextRoomId = 1;
+    private static int nextRoomId = 0;
 
+    // Ordered so that the room with id x is at index x
     private static List<Room> rooms = new List<Room>();
     private static List<Vector3> tempDoorLocs = new List<Vector3>();
 
     public static RoomGenerator Instance;
+
+    private List<Vector3> tempLocs = new List<Vector3>();
 
     void Awake()
     {
@@ -42,6 +46,7 @@ public class RoomGenerator : MonoBehaviour
         }
         GenerateRooms();
         GenerateDoors();
+        StartCoroutine(TestConnectivity());
     }
 
     // Update is called once per frame
@@ -91,16 +96,17 @@ public class RoomGenerator : MonoBehaviour
             foreach (int roomId in room.gridIds)
             {
                 Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(roomId) * roomSize, 0.0f, GridCellId2GridDim2(roomId) * roomSize);
-                Debug.Log(roomId + " -> " + cornerLoc);
                 Vector3 centerRoomOffset = new Vector3(roomSize / 2, 0.0f, roomSize / 2);
-                foreach (int adjRoomId in room.GetAdjacentGridIds(roomId))
+                foreach (int adjRoomGridId in room.GetAdjacentGridIds(roomId))
                 {
-                    // if (UnityEngine.Random.Range(0.0f, 1.0f) > 0.5)
-                    // {
-                    Vector3 offset = room.GetRoomOffset(roomId, adjRoomId);
-                    Debug.Log("Offset: " + offset);
-                    tempDoorLocs.Add(cornerLoc + centerRoomOffset + offset * (roomSize / 2));
-                    // }
+                    if (UnityEngine.Random.Range(0.0f, 1.0f) < doorChance)
+                    {
+                        Vector3 offset = room.GetRoomOffset(roomId, adjRoomGridId);
+                        tempDoorLocs.Add(cornerLoc + centerRoomOffset + offset / 2);
+                        int adjacentRoomId = GridCellId2RoomNum(adjRoomGridId);
+                        room.connectedRooms.Add(adjacentRoomId);
+                        rooms[adjacentRoomId].connectedRooms.Add(GridCellId2RoomNum(roomId));
+                    }
                 }
             }
         }
@@ -115,7 +121,7 @@ public class RoomGenerator : MonoBehaviour
         {
             int selectorId = (int)UnityEngine.Random.Range(0.0f, roomIds.Count);
             int randomRoomId = roomIds[selectorId];
-            if (grid[GridCellId2GridDim1(randomRoomId), GridCellId2GridDim2(randomRoomId)] == 0)
+            if (GridCellId2RoomNum(randomRoomId) == 0)
             {
                 return randomRoomId;
             }
@@ -126,6 +132,7 @@ public class RoomGenerator : MonoBehaviour
 
     void OnDrawGizmos()
     {
+        Gizmos.color = UnityEngine.Color.white;
         // Make a frame along all rooms
         // Vector3 rightOffset = Vector3.forward * roomSize * gridSize;
         // Vector3 downOffset = Vector3.right * roomSize * gridSize;
@@ -171,6 +178,64 @@ public class RoomGenerator : MonoBehaviour
         {
             Gizmos.DrawSphere(loc, 1.0f);
         }
+        Gizmos.color = UnityEngine.Color.blue;
+        foreach (Vector3 loc in tempLocs)
+        {
+            Gizmos.DrawCube(loc, Vector3.one * 2);
+        }
+    }
+
+    public IEnumerator TestConnectivity()
+    {
+        Gizmos.color = UnityEngine.Color.blue;
+        Vector3 centerOffset = new Vector3(roomSize / 2, 0.0f, roomSize / 2);
+        bool[] visitedRooms = new bool[rooms.Count];
+        // Used to backtrack
+        List<int> visitedOrder = new List<int>();
+        int currBacktrackPos = 0;
+        for (int i = 0; i < visitedRooms.Length; i++)
+        {
+            visitedRooms[i] = false;
+        }
+        Debug.Log("visitedRooms length:" + visitedRooms.Length);
+        bool stuck = false;
+        int randGridId = UnityEngine.Random.Range(0, gridSize) * gridSize + UnityEngine.Random.Range(0, gridSize);
+        int currentRoomNum = GridCellId2RoomNum(randGridId);
+        do
+        {
+            foreach (int id in rooms[currentRoomNum].gridIds)
+            {
+                Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(id) * roomSize, 0.0f, GridCellId2GridDim2(id) * roomSize);
+                tempLocs.Add(cornerLoc + centerOffset);
+            }
+            visitedRooms[currentRoomNum] = true;
+
+            stuck = true;
+            currBacktrackPos = visitedOrder.Count - 1;
+            while (stuck)
+            {
+                List<int> connectedRooms = rooms[currentRoomNum].connectedRooms;
+                for (int i = 0; i < connectedRooms.Count; i++)
+                {
+                    Debug.Log("connectedRooms[i] = " + connectedRooms[i]);
+                    if (!visitedRooms[connectedRooms[i]])
+                    {
+                        stuck = false;
+                        currentRoomNum = connectedRooms[i];
+                        visitedOrder.Add(currentRoomNum);
+                        break;
+                    }
+                }
+                if (currBacktrackPos < 0) { break; }
+                currentRoomNum = visitedOrder[currBacktrackPos--];
+            }
+            yield return new WaitForSeconds(0.05f);
+        } while (!stuck);
+    }
+
+    private int GridCellId2RoomNum(int gridCellId)
+    {
+        return grid[GridCellId2GridDim1(gridCellId), GridCellId2GridDim2(gridCellId)];
     }
 
     private int GridCellId2GridDim1(int gridCellId)

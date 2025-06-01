@@ -8,6 +8,8 @@ public class Room
     // The 1D grid indices which the room occupies
     public List<int> gridIds = new List<int>();
 
+    public List<int> connectedRooms = new List<int>();
+
     public Room(int id, int startingGridId)
     {
         roomId = id;
@@ -19,6 +21,7 @@ public class Room
     {
         HashSet<int> adjRooms = new HashSet<int>();
         int gridSize = RoomGenerator.Instance.GetGridSize();
+        // UP Check
         if (gridId - gridSize >= 0)
         {
             if (!gridIds.Contains(gridId - gridSize))
@@ -27,7 +30,7 @@ public class Room
             }
         }
         // DOWN check
-        else if (gridId + gridSize < gridSize * gridSize)
+        if (gridId + gridSize < gridSize * gridSize)
         {
             if (!gridIds.Contains(gridId + gridSize))
             {
@@ -35,7 +38,7 @@ public class Room
             }
         }
         // RIGHT check
-        else if ((gridId + 1) % gridSize != 0)
+        if ((gridId + 1) % gridSize != 0)
         {
             if (!gridIds.Contains(gridId + 1))
             {
@@ -43,7 +46,7 @@ public class Room
             }
         }
         // LEFT check
-        else if (gridId % gridSize != 0)
+        if (gridId % gridSize != 0)
         {
             if (!gridIds.Contains(gridId - 1))
             {
