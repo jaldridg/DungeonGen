@@ -152,8 +152,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   deadRoomChance: 0.5
-  doorChance: 0.3
-  gridSize: 20
+  doorChance: 0.2
+  gridSize: 50
   roomSize: 5
 --- !u!4 &460460916
 Transform:

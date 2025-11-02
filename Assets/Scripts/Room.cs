@@ -10,6 +10,9 @@ public class Room
 
     public List<int> connectedRooms = new List<int>();
 
+    // Used for checking connectivity during generation
+    public bool visited = false;
+
     public Room(int id, int startingGridId)
     {
         roomId = id;
