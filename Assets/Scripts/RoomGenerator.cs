@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,10 +25,10 @@ public class RoomGenerator : MonoBehaviour
 
     public static RoomGenerator Instance;
 
-    private List<Vector3> tempLocs = new List<Vector3>();
-    // The number of room "region" which are isolated from other regions
-    // Rooms within region i can be reached from any room in region i
-    private int dungeonRegions = 1;
+    // Rooms within region i can be reached from any room in region i but not from rooms belonging to different regions
+    private List<List<Room>> regionsList = new List<List<Room>>();
+    private List<UnityEngine.Color> regionColors = new List<UnityEngine.Color>();
+
 
     void Awake()
     {
@@ -184,59 +185,65 @@ public class RoomGenerator : MonoBehaviour
             Gizmos.DrawSphere(loc, 1.0f);
         }
         Gizmos.color = UnityEngine.Color.blue;
-        foreach (Vector3 loc in tempLocs)
+        for (int i = 0; i < regionsList.Count; i++)
         {
-            Gizmos.DrawCube(loc, Vector3.one * 2);
+            List<Room> reg = regionsList[i];
+            Gizmos.color = regionColors[i];
+            foreach (Room r in reg)
+            {
+                foreach (int gid in r.gridIds)
+                {
+                    Vector3 offset = new Vector3(roomSize * 0.5f, 0.0f, roomSize * 0.5f);
+                    Vector3 loc = new Vector3(GridCellId2GridDim1(gid) * roomSize, 0.0f, GridCellId2GridDim2(gid) * roomSize);
+                    Gizmos.DrawCube(loc + offset, Vector3.one * 2);
+                }
+            }
         }
     }
 
     public IEnumerator TestConnectivity()
     {
-        List<Room> unvistedRooms = rooms;
+        List<Room> unvisitedRooms = new List<Room>();
+        rooms.ForEach(r => unvisitedRooms.Add(r));
 
-        while (unvistedRooms.Count > 0)
+        // Loop over each region
+        while (unvisitedRooms.Count > 0)
         {
-            Vector3 centerOffset = new Vector3(roomSize / 2, 0.0f, roomSize / 2);
-            // Used to backtrack (to mimick recursion)
-            List<int> visitedOrder = new List<int>();
-            Debug.Log("unvistedRooms count:" + unvistedRooms.Count);
-            bool stuck = true;
-            int currentRoomNum = GridCellId2RoomNum(unvistedRooms[0].gridIds[0]);
+            // Keep track of the rooms you've visited to add to the region
+            List<Room> region = new List<Room>();
+            // Keep track of the order you've looked at rooms for backtracking
+            List<Room> visitedStack = new List<Room>();
 
-            do
+            // Get a room that hasn't been looked at
+            Room currentRoom = unvisitedRooms[0];
+            visitedStack.Add(currentRoom);
+
+            while (visitedStack.Count > 0)
             {
-                Room currRoom = rooms[currentRoomNum];
-                foreach (int id in currRoom.gridIds)
-                {
-                    Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(id) * roomSize, 0.0f, GridCellId2GridDim2(id) * roomSize);
-                    tempLocs.Add(cornerLoc + centerOffset);
-                }
-                currRoom.visited = true;
-                unvistedRooms.Remove(currRoom);
+                int currentDepth = visitedStack.Count - 1;
+                currentRoom = visitedStack[currentDepth];
+                visitedStack.RemoveAt(currentDepth);
+                currentRoom.visited = true;
+                unvisitedRooms.Remove(currentRoom);
+                region.Add(currentRoom);
 
-                int currBacktrackPos = visitedOrder.Count - 1;
-                while (stuck)
+                foreach (int rId in currentRoom.connectedRooms)
                 {
-                    List<int> connectedRooms = currRoom.connectedRooms;
-                    // Loop over each connected room and visit if not already visited
-                    for (int i = 0; i < connectedRooms.Count; i++)
+                    Room conRoom = rooms[rId];
+                    if (!conRoom.visited)
                     {
-                        Debug.Log("rooms[currRoom.connectedRooms[i]] = " + rooms[currRoom.connectedRooms[i]]);
-                        Room connRoom = rooms[currRoom.connectedRooms[i]];
-                        if (!connRoom.visited)
-                        {
-                            stuck = false;
-                            currentRoomNum = connectedRooms[i];
-                            visitedOrder.Add(currentRoomNum);
-                            break;
-                        }
+                        visitedStack.Add(conRoom);
+                        break;
                     }
-                    if (currBacktrackPos < 0) { break; }
-                    currentRoomNum = visitedOrder[currBacktrackPos--];
                 }
-                yield return new WaitForSeconds(1.0f);
-            } while (!stuck);
-            dungeonRegions += 1;
+            }
+
+            regionsList.Add(region);
+            float r = UnityEngine.Random.Range(0.0f, 1.0f);
+            float g = UnityEngine.Random.Range(0.0f, 1.0f);
+            float b = UnityEngine.Random.Range(0.0f, 1.0f);
+            regionColors.Add(new UnityEngine.Color(r, g, b));
+            yield return new WaitForSeconds(1.0f);
         }
     }
 
