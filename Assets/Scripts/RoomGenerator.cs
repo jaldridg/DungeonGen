@@ -222,19 +222,24 @@ public class RoomGenerator : MonoBehaviour
             {
                 int currentDepth = visitedStack.Count - 1;
                 currentRoom = visitedStack[currentDepth];
-                visitedStack.RemoveAt(currentDepth);
                 currentRoom.visited = true;
                 unvisitedRooms.Remove(currentRoom);
                 region.Add(currentRoom);
 
+                bool foundRoom = false;
                 foreach (int rId in currentRoom.connectedRooms)
                 {
                     Room conRoom = rooms[rId];
                     if (!conRoom.visited)
                     {
                         visitedStack.Add(conRoom);
+                        foundRoom = true;
                         break;
                     }
+                }
+                if (!foundRoom)
+                {
+                    visitedStack.RemoveAt(currentDepth);
                 }
             }
 
@@ -243,7 +248,7 @@ public class RoomGenerator : MonoBehaviour
             float g = UnityEngine.Random.Range(0.0f, 1.0f);
             float b = UnityEngine.Random.Range(0.0f, 1.0f);
             regionColors.Add(new UnityEngine.Color(r, g, b));
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(0.5f);
         }
     }
 
