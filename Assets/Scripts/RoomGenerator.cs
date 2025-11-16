@@ -9,6 +9,9 @@ public class RoomGenerator : MonoBehaviour
     // The change a room will expand to an adjacent cell during generation
     [SerializeField] float deadRoomChance = 0.5f;
 
+    // The proportions of doors added randomly after initial door maze generation completes - dangerous over 1.0
+    [SerializeField] float rand2MazeDoorRatio = 0.1f;
+
     [SerializeField] public int gridSize = 10;
     [SerializeField] public int roomSize = 5;
     // Stores the room ids which belong to the locations in the grid
@@ -136,14 +139,34 @@ public class RoomGenerator : MonoBehaviour
 
             // Connect the rooms
             int adjacentRoomId = GridCellId2RoomId(adjGridId);
-            currentRoom.connectedRooms.Add(adjacentRoomId);
+            currentRoom.AddConnectedRoom(adjacentRoomId);
             Room nextRoom = rooms[adjacentRoomId];
-            nextRoom.connectedRooms.Add(GridCellId2RoomId(gridId));
+            nextRoom.AddConnectedRoom(GridCellId2RoomId(gridId));
             currentRoom.visited = true;
 
             // Prepare for next iteration
             visitedStack.Add(nextRoom);
             currentRoom = nextRoom;
+        }
+
+        // Add additional doors for more connections
+        int additionalDoors = (int)(rooms.Count * rand2MazeDoorRatio);
+        int doorsAdded = 0;
+        while (doorsAdded < additionalDoors)
+        {
+            Room randRoom = rooms[UnityEngine.Random.Range(0, rooms.Count)];
+            int randGridId = randRoom.gridIds[UnityEngine.Random.Range(0, randRoom.gridIds.Count)];
+
+            Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(randGridId) * roomSize, 0.0f, GridCellId2GridDim2(randGridId) * roomSize);
+            foreach (int adjRoomId in randRoom.GetAdjacentGridIds(randGridId))
+            {
+                Vector3 offset = randRoom.GetRoomOffset(randGridId, adjRoomId) / 2;
+                tempDoorLocs.Add(cornerLoc + offset);
+                int adjacentRoomId = GridCellId2RoomId(adjRoomId);
+                randRoom.AddConnectedRoom(adjacentRoomId);
+                rooms[adjacentRoomId].AddConnectedRoom(GridCellId2RoomId(randGridId));
+                doorsAdded++;
+            }
         }
     }
 

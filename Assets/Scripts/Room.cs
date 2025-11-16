@@ -100,8 +100,18 @@ public class Room
         {
             return Vector3.back * roomSize;
         }
-        else {
+        else
+        {
             return Vector3.zero;
+        }
+    }
+
+    // Adds a connected room with duplicate prevention
+    public void AddConnectedRoom(int roomId)
+    {
+        if (!connectedRooms.Contains(roomId))
+        {
+            connectedRooms.Add(roomId);
         }
     }
 }
