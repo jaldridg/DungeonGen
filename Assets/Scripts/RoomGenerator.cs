@@ -1,8 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,8 +8,7 @@ public class RoomGenerator : MonoBehaviour
 {
     // The change a room will expand to an adjacent cell during generation
     [SerializeField] float deadRoomChance = 0.5f;
-    // The chance each wall in a room has to generate a door
-    [SerializeField] float doorChance = 0.5f;
+
     [SerializeField] public int gridSize = 10;
     [SerializeField] public int roomSize = 5;
     // Stores the room ids which belong to the locations in the grid
@@ -95,29 +92,59 @@ public class RoomGenerator : MonoBehaviour
         }
     }
 
+    // Connects rooms like a maze then sprinkles in more doors
     private void GenerateDoors()
     {
-        foreach (Room room in rooms)
+        Room currentRoom = rooms[0];
+        List<Room> visitedStack = new List<Room>() {currentRoom};
+
+        while (visitedStack.Count > 0)
         {
-            foreach (int roomId in room.gridIds)
+            // Stores room Ids of room pairs in which a door could be generated between
+            List<Vector2> roomPairs = new List<Vector2>();
+
+            // Generates room pairs by looping over each cell in a room and getting the neighboring room if unvisited
+            foreach (int gId in currentRoom.gridIds)
             {
-                Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(roomId) * roomSize, 0.0f, GridCellId2GridDim2(roomId) * roomSize);
-                Vector3 centerRoomOffset = new Vector3(roomSize / 2, 0.0f, roomSize / 2);
-                foreach (int adjRoomGridId in room.GetAdjacentGridIds(roomId))
+                foreach (int adjGId in currentRoom.GetAdjacentGridIds(gId))
                 {
-                    if (UnityEngine.Random.Range(0.0f, 1.0f) < doorChance)
+                    if (!rooms[GridCellId2RoomId(adjGId)].visited)
                     {
-                        Vector3 offset = room.GetRoomOffset(roomId, adjRoomGridId);
-                        tempDoorLocs.Add(cornerLoc + centerRoomOffset + offset / 2);
-                        int adjacentRoomId = GridCellId2RoomNum(adjRoomGridId);
-                        room.connectedRooms.Add(adjacentRoomId);
-                        rooms[adjacentRoomId].connectedRooms.Add(GridCellId2RoomNum(roomId));
+                        roomPairs.Add(new Vector2(gId, adjGId));
                     }
                 }
             }
+
+            // Check if room is a dead end
+            if (roomPairs.Count == 0)
+            {
+                currentRoom.visited = true;
+                currentRoom = visitedStack[visitedStack.Count - 1];
+                visitedStack.RemoveAt(visitedStack.Count - 1);
+                continue;
+            }
+
+            // If not a dead end, choose a door by choosing a random pair
+            Vector2 roomPair = roomPairs[UnityEngine.Random.Range(0, roomPairs.Count)];
+            int gridId = (int)roomPair[0];
+            int adjGridId = (int)roomPair[1];
+
+            // Find door location
+            Vector3 offset = currentRoom.GetRoomOffset(gridId, adjGridId) / 2;
+            Vector3 gridLoc = new Vector3(roomSize * GridCellId2GridDim1(gridId), 0.0f, roomSize * GridCellId2GridDim2(gridId));
+            tempDoorLocs.Add(gridLoc + offset);
+
+            // Connect the rooms
+            int adjacentRoomId = GridCellId2RoomId(adjGridId);
+            currentRoom.connectedRooms.Add(adjacentRoomId);
+            Room nextRoom = rooms[adjacentRoomId];
+            nextRoom.connectedRooms.Add(GridCellId2RoomId(gridId));
+            currentRoom.visited = true;
+
+            // Prepare for next iteration
+            visitedStack.Add(nextRoom);
+            currentRoom = nextRoom;
         }
-        // for each room
-        // draw door with % chance if adj room is not the same id   
     }
 
     // Randomly choose a cell from the given list which doesn't belong to another room
@@ -127,7 +154,7 @@ public class RoomGenerator : MonoBehaviour
         {
             int selectorId = (int)UnityEngine.Random.Range(0.0f, roomIds.Count);
             int randomRoomId = roomIds[selectorId];
-            if (GridCellId2RoomNum(randomRoomId) == 0)
+            if (GridCellId2RoomId(randomRoomId) == 0)
             {
                 return randomRoomId;
             }
@@ -180,11 +207,13 @@ public class RoomGenerator : MonoBehaviour
                 }
             }
         }
+
+        Vector3 centerRoomOffset = new Vector3(roomSize * 0.5f, 0.0f, roomSize * 0.5f);
         foreach (Vector3 loc in tempDoorLocs)
         {
-            Gizmos.DrawSphere(loc, 1.0f);
+            Gizmos.DrawSphere(loc + centerRoomOffset, 1.0f);
         }
-        Gizmos.color = UnityEngine.Color.blue;
+
         for (int i = 0; i < regionsList.Count; i++)
         {
             List<Room> reg = regionsList[i];
@@ -193,9 +222,8 @@ public class RoomGenerator : MonoBehaviour
             {
                 foreach (int gid in r.gridIds)
                 {
-                    Vector3 offset = new Vector3(roomSize * 0.5f, 0.0f, roomSize * 0.5f);
-                    Vector3 loc = new Vector3(GridCellId2GridDim1(gid) * roomSize, 0.0f, GridCellId2GridDim2(gid) * roomSize);
-                    Gizmos.DrawCube(loc + offset, Vector3.one * 2);
+                    Vector3 gridScaling = new Vector3(GridCellId2GridDim1(gid) * roomSize, 0.0f, GridCellId2GridDim2(gid) * roomSize);
+                    Gizmos.DrawCube(gridScaling + centerRoomOffset, Vector3.one * 2);
                 }
             }
         }
@@ -204,6 +232,7 @@ public class RoomGenerator : MonoBehaviour
     public IEnumerator TestConnectivity()
     {
         List<Room> unvisitedRooms = new List<Room>();
+        rooms.ForEach(r => r.visited = false);
         rooms.ForEach(r => unvisitedRooms.Add(r));
 
         // Loop over each region
@@ -248,11 +277,11 @@ public class RoomGenerator : MonoBehaviour
             float g = UnityEngine.Random.Range(0.0f, 1.0f);
             float b = UnityEngine.Random.Range(0.0f, 1.0f);
             regionColors.Add(new UnityEngine.Color(r, g, b));
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.1f);
         }
     }
 
-    private int GridCellId2RoomNum(int gridCellId)
+    private int GridCellId2RoomId(int gridCellId)
     {
         return grid[GridCellId2GridDim1(gridCellId), GridCellId2GridDim2(gridCellId)];
     }
