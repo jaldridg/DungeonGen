@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
@@ -21,13 +22,19 @@ public class RoomGenerator : MonoBehaviour
 
     // Ordered so that the room with id x is at index x
     private static List<Room> rooms = new List<Room>();
-    private static List<Vector3> tempDoorLocs = new List<Vector3>();
+    private static List<Vector3> wallLocs = new List<Vector3>();
+    private static List<Vector3> doorLocs = new List<Vector3>();
 
     public static RoomGenerator Instance;
 
     // Rooms within region i can be reached from any room in region i but not from rooms belonging to different regions
     private List<List<Room>> regionsList = new List<List<Room>>();
     private List<UnityEngine.Color> regionColors = new List<UnityEngine.Color>();
+
+    // GameObjects for Physical generation 
+    [SerializeField] GameObject floorGO;
+    [SerializeField] GameObject wallGO;
+    [SerializeField] GameObject doorGO;
 
 
     void Awake()
@@ -51,8 +58,10 @@ public class RoomGenerator : MonoBehaviour
             }
         }
         GenerateRooms();
+        GenerateWalls();
         GenerateDoors();
-        StartCoroutine(TestConnectivity());
+        //StartCoroutine(TestConnectivity());
+        BuildRooms();
     }
 
     // Update is called once per frame
@@ -82,6 +91,7 @@ public class RoomGenerator : MonoBehaviour
             // Assign room to grid
             grid[GridCellId2GridDim1(randomCell), GridCellId2GridDim2(randomCell)] = newRoom.roomId;
 
+            // Expand grid cells to expand room
             while (UnityEngine.Random.Range(0.0f, 1.0f) > deadRoomChance)
             {
                 List<int> adjRooms = newRoom.GetRoomBorderGridIds();
@@ -95,6 +105,47 @@ public class RoomGenerator : MonoBehaviour
         }
     }
 
+    private void GenerateWalls()
+    {
+        foreach (Room room in rooms)
+        {
+            foreach (int cellId in room.gridIds)
+            {
+                Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(cellId) * roomSize, 0.0f, GridCellId2GridDim2(cellId) * roomSize);
+                float roomHalfSize = roomSize / 2.0f;
+                Vector3 roomCenter = new Vector3(cornerLoc.x + roomHalfSize, 0.0f, cornerLoc.z + roomHalfSize);
+
+                // Going right on the grid is forward in Unity space
+                // Going down on the grid is right in Unity space
+                
+                // Use the y coordinate to store whether walls are vertical or horizontal (for later)
+                // UP check
+                if (!room.gridIds.Contains(cellId - gridSize))
+                {
+                    Vector3 newWall = roomCenter + Vector3.left * roomHalfSize;
+                    wallLocs.Add(newWall + Vector3.down);
+                }
+                // DOWN check
+                if (!room.gridIds.Contains(cellId + gridSize))
+                {
+                    Vector3 newWall = roomCenter + Vector3.right * roomHalfSize;
+                    wallLocs.Add(newWall + Vector3.down * 2);
+                }
+                // RIGHT check
+                if (!room.gridIds.Contains(cellId + 1))
+                {
+                    Vector3 newWall = roomCenter + Vector3.forward * roomHalfSize;
+                    wallLocs.Add(newWall + Vector3.up * 2);
+                }
+                // LEFT check
+                if (!room.gridIds.Contains(cellId - 1))
+                {
+                    Vector3 newWall = roomCenter + Vector3.back * roomHalfSize;
+                    wallLocs.Add(newWall + Vector3.up);
+                }
+            }
+        }
+    }
     // Connects rooms like a maze then sprinkles in more doors
     private void GenerateDoors()
     {
@@ -135,7 +186,7 @@ public class RoomGenerator : MonoBehaviour
             // Find door location
             Vector3 offset = currentRoom.GetRoomOffset(gridId, adjGridId) / 2;
             Vector3 gridLoc = new Vector3(roomSize * GridCellId2GridDim1(gridId), 0.0f, roomSize * GridCellId2GridDim2(gridId));
-            tempDoorLocs.Add(gridLoc + offset);
+            doorLocs.Add(gridLoc + offset);
 
             // Connect the rooms
             int adjacentRoomId = GridCellId2RoomId(adjGridId);
@@ -149,6 +200,7 @@ public class RoomGenerator : MonoBehaviour
             currentRoom = nextRoom;
         }
 
+
         // Add additional doors for more connections
         int additionalDoors = (int)(rooms.Count * rand2MazeDoorRatio);
         int doorsAdded = 0;
@@ -161,12 +213,39 @@ public class RoomGenerator : MonoBehaviour
             foreach (int adjRoomId in randRoom.GetAdjacentGridIds(randGridId))
             {
                 Vector3 offset = randRoom.GetRoomOffset(randGridId, adjRoomId) / 2;
-                tempDoorLocs.Add(cornerLoc + offset);
+                doorLocs.Add(cornerLoc + offset);
                 int adjacentRoomId = GridCellId2RoomId(adjRoomId);
                 randRoom.AddConnectedRoom(adjacentRoomId);
                 rooms[adjacentRoomId].AddConnectedRoom(GridCellId2RoomId(randGridId));
                 doorsAdded++;
             }
+        }
+    }
+
+    private void BuildRooms()
+    {
+        Vector3 centerRoomOffset = new Vector3(roomSize * 0.5f, 0.0f, roomSize * 0.5f);
+        foreach (Room r in rooms)
+        {
+            foreach(int gridId in r.gridIds)
+            {
+                // Make the floor
+                Vector3 loc = new Vector3(GridCellId2GridDim1(gridId) * roomSize, 0.0f, GridCellId2GridDim2(gridId) * roomSize);
+                GameObject f = Instantiate(floorGO, loc + centerRoomOffset, Quaternion.identity);
+                f.transform.localScale = new Vector3(roomSize / 10.0f, 1.0f, roomSize / 10.0f);
+            }
+        }
+
+        foreach (Vector3 wall in wallLocs)
+        {
+            Vector3 wall2D = new Vector3(wall.x, roomSize / 4.0f, wall.z);
+            GameObject w = Instantiate(wallGO, wall2D, Quaternion.identity);
+            // Decide whether walls are vertical or horizontal based on our flag in the y coordinate
+            float rot = wall.y >= 1.0f ? 0.0f : 90.0f;
+            // Decide whether to flip walls 180 bases on the magnitude of our flag
+            float flip = Math.Abs(wall.y) > 1.1f ? 180.0f: 0.0f;
+            w.transform.rotation = Quaternion.Euler(0.0f, rot + flip, 0.0f);
+            w.transform.localScale = new Vector3(roomSize / 10.0f, roomSize / 10.0f, 1.0f);
         }
     }
 
@@ -188,51 +267,20 @@ public class RoomGenerator : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        Gizmos.color = UnityEngine.Color.white;
-        // Make a frame along all rooms
-        // Vector3 rightOffset = Vector3.forward * roomSize * gridSize;
-        // Vector3 downOffset = Vector3.right * roomSize * gridSize;
-        // Gizmos.DrawLine(Vector3.zero, rightOffset);
-        // Gizmos.DrawLine(Vector3.zero, downOffset);
-        // Gizmos.DrawLine(Vector3.zero + downOffset, rightOffset + downOffset);
-        // Gizmos.DrawLine(Vector3.zero + rightOffset, downOffset + rightOffset);
+        Gizmos.color = UnityEngine.Color.black;
 
-        foreach (Room room in rooms)
+        float halfRoomSize = roomSize / 2.0f;
+        foreach (Vector3 wall in wallLocs)
         {
-
-            foreach (int cellId in room.gridIds)
-            {
-                Vector3 cornerLoc = new Vector3(GridCellId2GridDim1(cellId) * roomSize, 0.0f, GridCellId2GridDim2(cellId) * roomSize);
-
-                // It's confusing but trust
-                Vector3 cellDownOffset = Vector3.right * roomSize;
-                Vector3 cellRightOffset = Vector3.forward * roomSize;
-
-                // UP check
-                if (!room.gridIds.Contains(cellId - gridSize))
-                {
-                    Gizmos.DrawLine(cornerLoc, cornerLoc + cellRightOffset);
-                }
-                // DOWN check
-                if (!room.gridIds.Contains(cellId + gridSize))
-                {
-                    Gizmos.DrawLine(cornerLoc + cellDownOffset, cornerLoc + cellRightOffset + cellDownOffset);
-                }
-                // RIGHT check
-                if (!room.gridIds.Contains(cellId + 1))
-                {
-                    Gizmos.DrawLine(cornerLoc + cellRightOffset, cornerLoc + cellDownOffset + cellRightOffset);
-                }
-                // LEFT check
-                if (!room.gridIds.Contains(cellId - 1))
-                {
-                    Gizmos.DrawLine(cornerLoc, cornerLoc + cellDownOffset);
-                }
-            }
+            // Decide whether walls are vertical or horizontal based on our flag in the y coordinate
+            Vector3 offset = wall.y >= 1.0f ? Vector3.right : Vector3.forward;
+            Vector3 wall2D = new Vector3(wall.x, 0.0f, wall.z);
+            Gizmos.DrawLine(wall2D - offset * halfRoomSize, wall2D + offset * halfRoomSize);
         }
 
+        Gizmos.color = UnityEngine.Color.grey;
         Vector3 centerRoomOffset = new Vector3(roomSize * 0.5f, 0.0f, roomSize * 0.5f);
-        foreach (Vector3 loc in tempDoorLocs)
+        foreach (Vector3 loc in doorLocs)
         {
             Gizmos.DrawSphere(loc + centerRoomOffset, 1.0f);
         }
