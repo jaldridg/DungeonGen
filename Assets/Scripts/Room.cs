@@ -76,33 +76,33 @@ public class Room
 
     // Gets a vector offset of the second room from the first, essentailly getting the room's direction
     // Assumes room ids are valid and that the rooms are adjacent
-    public Vector3 GetRoomOffset(int originalId, int offsetRoom)
+    public Vector2 GetRoomOffset(int originalId, int offsetRoom)
     {
         int gridSize = RoomGenerator.Instance.GetGridSize();
         int roomSize = RoomGenerator.Instance.GetRoomSize();
         // UP check
         if (offsetRoom - originalId == -gridSize)
         {
-            return Vector3.left * roomSize;
+            return Vector2.left * roomSize;
         }
         // DOWN check
         else if (offsetRoom - originalId == gridSize)
         {
-            return Vector3.right * roomSize;
+            return Vector2.right * roomSize;
         }
         // RIGHT check
         else if (offsetRoom - originalId == 1)
         {
-            return Vector3.forward * roomSize;
+            return Vector2.up * roomSize;
         }
         // LEFT check
         else if (offsetRoom - originalId == -1)
         {
-            return Vector3.back * roomSize;
+            return Vector3.down * roomSize;
         }
         else
         {
-            return Vector3.zero;
+            return Vector2.zero;
         }
     }
 
