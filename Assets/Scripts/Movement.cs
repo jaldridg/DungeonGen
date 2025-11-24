@@ -4,9 +4,11 @@ using UnityEngine;
 
 public class Movement : MonoBehaviour
 {
-    [SerializeField] float moveSpeed = 4.0f;
+    [SerializeField] float maxSpeed = 4.0f;
+    [SerializeField] float acceleration = 6.0f;
 
-    private Vector2 velocity = Vector2.zero;
+    private Vector2 velocityVector = Vector2.zero;
+    private Vector2 accelerationVector = Vector2.zero;
     // Start is called before the first frame update
     void Start()
     {
@@ -16,24 +18,34 @@ public class Movement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Vector2 movementVector = Vector2.zero;
+        Vector2 accel = Vector2.zero;
         if (Input.GetKey(KeyCode.W))
         {
-            movementVector += Vector2.left;
+            accel += Vector2.left;
         }
         if (Input.GetKey(KeyCode.A))
         {
-            movementVector += Vector2.down;
+            accel += Vector2.down;
         }
         if (Input.GetKey(KeyCode.S))
         {
-            movementVector += Vector2.right;
+            accel += Vector2.right;
         }
         if (Input.GetKey(KeyCode.D))
         {
-            movementVector += Vector2.up;
+            accel += Vector2.up;
         }
-        velocity = movementVector.normalized * moveSpeed * Time.deltaTime;
-        gameObject.transform.position += new Vector3(velocity.x, 0.0f, velocity.y);
+
+        accelerationVector = accel.normalized * acceleration;
+        if (accelerationVector == Vector2.zero)
+        {
+            accelerationVector = -velocityVector.normalized * acceleration;
+        }
+        velocityVector += accelerationVector * Time.deltaTime;
+        if (velocityVector.magnitude > maxSpeed)
+        {
+            velocityVector = velocityVector.normalized * maxSpeed;
+        }
+        gameObject.transform.position += new Vector3(velocityVector.x, 0.0f, velocityVector.y) * Time.deltaTime;
     }
 }

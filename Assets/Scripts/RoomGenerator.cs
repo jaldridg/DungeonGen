@@ -263,16 +263,6 @@ public class RoomGenerator : MonoBehaviour
             o.transform.rotation = Quaternion.Euler(0.0f, needToFlip ? 90.0f : 0.0f, 0.0f);
             o.transform.localScale = new Vector3(roomSize / 10.0f, roomSize / 10.0f, 1.0f);
         }
-
-        // foreach (Vector2 door in doors)
-        // {
-        //     Vector3 door3D = new Vector3(door.x, roomSize / 4.0f, door.y);
-        //     GameObject d = Instantiate(doorGO, door3D, Quaternion.identity);
-        //     // Vertical walls coordinates will be multiples of roomSize and need to be flipped
-        //     bool needToFlip = door.x % roomSize == 0;
-        //     d.transform.rotation = Quaternion.Euler(0.0f, needToFlip ? 90.0f : 0.0f, 0.0f);
-        //     d.transform.localScale = new Vector3(roomSize / 10.0f, roomSize / 10.0f, 1.0f);
-        // }
     }
 
     // Randomly choose a cell from the given list which doesn't belong to another room
@@ -302,6 +292,15 @@ public class RoomGenerator : MonoBehaviour
             Vector3 offset = wall.x % roomSize == 0 ? Vector3.forward : Vector3.right;
             Vector3 wall3D = new Vector3(wall.x, 0.0f, wall.y);
             Gizmos.DrawLine(wall3D - offset * halfRoomSize, wall3D + offset * halfRoomSize);
+        }
+
+        foreach (Vector2 door in doors)
+        {
+            // Vertical walls coordinates will be multiples of roomSize and need to be flipped
+            Vector3 offset = door.x % roomSize == 0 ? Vector3.forward : Vector3.right;
+            Vector3 door3D = new Vector3(door.x, 0.0f, door.y);
+            Gizmos.DrawLine(door3D - offset * halfRoomSize, door3D - offset * halfRoomSize / 4.0f);
+            Gizmos.DrawLine(door3D + offset * halfRoomSize, door3D + offset * halfRoomSize / 4.0f);
         }
 
         Gizmos.color = UnityEngine.Color.grey;
