@@ -155,6 +155,9 @@ MonoBehaviour:
   rand2MazeDoorRatio: 0.5
   gridSize: 50
   roomSize: 5
+  floorGO: {fileID: 6000268410755113509, guid: be6c00a2dd8e895468fa3203b8b9654f, type: 3}
+  wallGO: {fileID: 7430308137889478442, guid: 45bde408a915761469ef34d78b0505ba, type: 3}
+  doorGO: {fileID: 1045086605379777446, guid: 87a0b628d403e6b4b88f3affb7b9b161, type: 3}
 --- !u!4 &460460916
 Transform:
   m_ObjectHideFlags: 0
