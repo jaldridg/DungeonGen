@@ -22,8 +22,7 @@ public class RoomGenerator : MonoBehaviour
 
     // Ordered so that the room with id x is at index x
     private static List<Room> rooms = new List<Room>();
-    private static Dictionary<Vector2, int> walls = new Dictionary<Vector2, int>();
-    private static List<Vector3> wallLocs = new List<Vector3>();
+    private static HashSet<Vector2> walls = new HashSet<Vector2>();
     private static List<Vector3> doorLocs = new List<Vector3>();
 
     public static RoomGenerator Instance;
@@ -123,26 +122,22 @@ public class RoomGenerator : MonoBehaviour
                 // UP check
                 if (!room.gridIds.Contains(cellId - gridSize))
                 {
-                    Vector2 newWall = roomCenter + Vector2.left * roomHalfSize;
-                    walls.TryAdd(newWall, -1);
+                    walls.Add(roomCenter + Vector2.left * roomHalfSize);
                 }
                 // DOWN check
                 if (!room.gridIds.Contains(cellId + gridSize))
                 {
-                    Vector2 newWall = roomCenter + Vector2.right * roomHalfSize;
-                    walls.TryAdd(newWall, -2);
+                    walls.Add(roomCenter + Vector2.right * roomHalfSize);
                 }
                 // RIGHT check
                 if (!room.gridIds.Contains(cellId + 1))
                 {
-                    Vector2 newWall = roomCenter + Vector2.up * roomHalfSize;
-                    walls.TryAdd(newWall, 2);
+                    walls.Add(roomCenter + Vector2.up * roomHalfSize);
                 }
                 // LEFT check
                 if (!room.gridIds.Contains(cellId - 1))
                 {
-                    Vector2 newWall = roomCenter + Vector2.down * roomHalfSize;
-                    walls.TryAdd(newWall, 1);
+                    walls.Add(roomCenter + Vector2.down * roomHalfSize);
                 }
             }
         }
@@ -237,26 +232,13 @@ public class RoomGenerator : MonoBehaviour
             }
         }
 
-        // foreach (Vector3 wall in wallLocs)
-        // {
-        //     Vector3 wall2D = new Vector3(wall.x, roomSize / 4.0f, wall.z);
-        //     GameObject w = Instantiate(wallGO, wall2D, Quaternion.identity);
-        //     // Decide whether walls are vertical or horizontal based on our flag in the y coordinate
-        //     float rot = wall.y >= 1.0f ? 0.0f : 90.0f;
-        //     // Decide whether to flip walls 180 bases on the magnitude of our flag
-        //     float flip = Math.Abs(wall.y) > 1.1f ? 180.0f: 0.0f;
-        //     w.transform.rotation = Quaternion.Euler(0.0f, rot + flip, 0.0f);
-        //     w.transform.localScale = new Vector3(roomSize / 10.0f, roomSize / 10.0f, 1.0f);
-        // }
-        foreach (KeyValuePair<Vector2, int> wall in walls)
+        foreach (Vector2 wall in walls)
         {
-            Vector3 wall3D = new Vector3(wall.Key.x, roomSize / 4.0f, wall.Key.y);
+            Vector3 wall3D = new Vector3(wall.x, roomSize / 4.0f, wall.y);
             GameObject w = Instantiate(wallGO, wall3D, Quaternion.identity);
-            // Decide whether walls are vertical or horizontal based on our flag in the y coordinate
-            float rot = wall.Value >= 1 ? 0.0f : 90.0f;
-            // Decide whether to flip walls 180 bases on the magnitude of our flag
-            float flip = Math.Abs(wall.Value) > 1 ? 180.0f: 0.0f;
-            w.transform.rotation = Quaternion.Euler(0.0f, rot + flip, 0.0f);
+            // Vertical walls coordinates will be multiples of roomSize and need to be flipped
+            bool needToFlip = wall.x % roomSize == 0;
+            w.transform.rotation = Quaternion.Euler(0.0f, needToFlip ? 90.0f : 0.0f, 0.0f);
             w.transform.localScale = new Vector3(roomSize / 10.0f, roomSize / 10.0f, 1.0f);
         }
     }
@@ -282,18 +264,11 @@ public class RoomGenerator : MonoBehaviour
         Gizmos.color = UnityEngine.Color.black;
 
         float halfRoomSize = roomSize / 2.0f;
-        // foreach (Vector3 wall in wallLocs)
-        // {
-        //     // Decide whether walls are vertical or horizontal based on our flag in the y coordinate
-        //     Vector3 offset = wall.y >= 1.0f ? Vector3.right : Vector3.forward;
-        //     Vector3 wall2D = new Vector3(wall.x, 0.0f, wall.z);
-        //     Gizmos.DrawLine(wall2D - offset * halfRoomSize, wall2D + offset * halfRoomSize);
-        // }
-        foreach (KeyValuePair<Vector2, int> wall in walls)
+        foreach (Vector2 wall in walls)
         {
-            // Decide whether walls are vertical or horizontal based on our flag in the y coordinate
-            Vector3 offset = wall.Value >= 1 ? Vector3.right : Vector3.forward;
-            Vector3 wall3D = new Vector3(wall.Key.x, 0.0f, wall.Key.y);
+            // Vertical walls coordinates will be multiples of roomSize and need to be flipped
+            Vector3 offset = wall.x % roomSize == 0 ? Vector3.forward : Vector3.right;
+            Vector3 wall3D = new Vector3(wall.x, 0.0f, wall.y);
             Gizmos.DrawLine(wall3D - offset * halfRoomSize, wall3D + offset * halfRoomSize);
         }
 
