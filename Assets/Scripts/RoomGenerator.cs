@@ -61,21 +61,8 @@ public class RoomGenerator : MonoBehaviour
         }
         GenerateRooms();
         GenerateWalls();
-        Debug.Log("Wall count = " + walls.Count);
         GenerateDoors();
         walls.ExceptWith(doors);
-        Debug.Log("Wall count = " + walls.Count);
-        Debug.Log("Door count = " + doors.Count);
-        Debug.Log(walls);
-        Debug.Log(doors);
-        foreach (Vector2 w in walls)
-        {
-            Debug.Log("wall: " + w.x + " " + w.y);
-        }
-        foreach (Vector2 d in doors)
-        {
-            Debug.Log("door: " + d.x + " " + d.y);
-        }
         //StartCoroutine(TestConnectivity());
         BuildRooms();
     }
@@ -160,7 +147,8 @@ public class RoomGenerator : MonoBehaviour
     // Connects rooms like a maze then sprinkles in more doors
     private void GenerateDoors()
     {
-        Dictionary<Vector2, float> walls = new Dictionary<Vector2, float>();        Room currentRoom = rooms[0];
+        Dictionary<Vector2, float> walls = new Dictionary<Vector2, float>();        
+        Room currentRoom = rooms[0];
         List<Room> visitedStack = new List<Room>() {currentRoom};
 
         while (visitedStack.Count > 0)
@@ -304,10 +292,10 @@ public class RoomGenerator : MonoBehaviour
         }
 
         Gizmos.color = UnityEngine.Color.grey;
-        foreach (Vector2 loc in doors)
-        {
-            Gizmos.DrawSphere(new Vector3(loc.x, 0.0f, loc.y), 1.0f);
-        }
+        // foreach (Vector2 loc in doors)
+        // {
+        //     Gizmos.DrawSphere(new Vector3(loc.x, 0.0f, loc.y), 1.0f);
+        // }
 
         Vector3 centerRoomOffset = new Vector3(roomSize * 0.5f, 0.0f, roomSize * 0.5f);
         for (int i = 0; i < regionsList.Count; i++)
