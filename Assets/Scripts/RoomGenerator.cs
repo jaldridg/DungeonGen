@@ -38,6 +38,9 @@ public class RoomGenerator : MonoBehaviour
     [SerializeField] GameObject wallGO;
     [SerializeField] GameObject doorGO;
 
+    // Room Obejcts
+    [SerializeField] GameObject crateGO;
+
 
     void Awake()
     {
@@ -65,10 +68,37 @@ public class RoomGenerator : MonoBehaviour
         walls.ExceptWith(doors);
         //StartCoroutine(TestConnectivity());
         BuildRooms();
+        GenerateObjects();
     }
 
-    // Update is called once per frame
-    void Update() { }
+    private void GenerateObjects()
+    {
+        float crateChance = 0.5f;
+
+        // Group walls and doors
+        List<Vector2> obstacles = new List<Vector2>();
+        walls.ToList().ForEach(w => obstacles.Add(w));
+        doors.ToList().ForEach(d => obstacles.Add(d));
+        foreach (Vector2 ob in obstacles)
+        {
+            if (UnityEngine.Random.Range(0.0f, 1.0f) < crateChance)
+            {
+                // Get offset to be outside of the wall instead of inside
+                bool horizontalOffset = ob.x % roomSize == 0;
+                float wallOffset = 0.01f + crateGO.transform.localScale.x / 2;
+                Vector3 wallOffsetVec = new Vector3(horizontalOffset ? wallOffset : 0.0f, 0.0f, horizontalOffset ? 0.0f : wallOffset);
+
+                // Move crate along the wall randomly
+                float offsetMagnitude = 1.2f + UnityEngine.Random.Range(0.0f, 3.3f);
+                bool randomBool = UnityEngine.Random.Range(0.0f, 1.0f) > 0.5f;
+                float finalOffset = randomBool ? offsetMagnitude : -offsetMagnitude;
+                Vector3 randomPlacementVec = new Vector3(horizontalOffset ? 0.0f : finalOffset, 0.0f, horizontalOffset ? finalOffset : 0.0f);
+
+                Vector3 crateLoc = new Vector3(ob.x, 0.0f, ob.y) + wallOffsetVec + randomPlacementVec;
+                GameObject crate = Instantiate(crateGO, crateLoc, Quaternion.identity);
+            }
+        }
+    }
 
     private void GenerateRooms()
     {

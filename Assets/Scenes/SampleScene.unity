@@ -158,6 +158,7 @@ MonoBehaviour:
   floorGO: {fileID: 6000268410755113509, guid: be6c00a2dd8e895468fa3203b8b9654f, type: 3}
   wallGO: {fileID: 7430308137889478442, guid: 45bde408a915761469ef34d78b0505ba, type: 3}
   doorGO: {fileID: 1045086605379777446, guid: 87a0b628d403e6b4b88f3affb7b9b161, type: 3}
+  crateGO: {fileID: 2414653361898891800, guid: 92fe64ecc9195b44ea7bbbea415e6379, type: 3}
 --- !u!4 &460460916
 Transform:
   m_ObjectHideFlags: 0
@@ -287,13 +288,21 @@ PrefabInstance:
       propertyPath: acceleration
       value: 20
       objectReference: {fileID: 0}
+    - target: {fileID: 6231331926312392185, guid: 662f318117f5ced4a97347efd0ee50da, type: 3}
+      propertyPath: cursorLimiting
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6848643648237947322, guid: 662f318117f5ced4a97347efd0ee50da, type: 3}
+      propertyPath: m_Constraints
+      value: 116
+      objectReference: {fileID: 0}
     - target: {fileID: 9199263198302184242, guid: 662f318117f5ced4a97347efd0ee50da, type: 3}
       propertyPath: m_LocalPosition.x
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 9199263198302184242, guid: 662f318117f5ced4a97347efd0ee50da, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9199263198302184242, guid: 662f318117f5ced4a97347efd0ee50da, type: 3}
       propertyPath: m_LocalPosition.z
