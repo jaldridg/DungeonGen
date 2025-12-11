@@ -5,15 +5,12 @@ using UnityEngine;
 public class EMouseIdleState : EMouseBaseState
 {
     Vector3 playerLoc;
-    public override void EnterState(EMouseStateManager eMouse)
-    {
-        Debug.Log("Start Idle");
-    }
+    public override void EnterState(EMouseStateManager eMouse) {}
 
     public override void UpdateState(EMouseStateManager eMouse)
     {
         // Transition logic
-        if (eMouse.GetPlayerDist() < 10.0f)
+        if (eMouse.GetPlayerDist() < 20.0f)
         {
             eMouse.ChangeState(eMouse.attackingState);
         }

@@ -41,6 +41,9 @@ public class RoomGenerator : MonoBehaviour
     // Room Obejcts
     [SerializeField] GameObject crateGO;
 
+    // Enemies
+    [SerializeField] GameObject eMouseGO;
+
 
     void Awake()
     {
@@ -69,6 +72,7 @@ public class RoomGenerator : MonoBehaviour
         //StartCoroutine(TestConnectivity());
         BuildRooms();
         GenerateObjects();
+        SpawnEnemies();
     }
 
     private void GenerateObjects()
@@ -97,6 +101,18 @@ public class RoomGenerator : MonoBehaviour
                 Vector3 crateLoc = new Vector3(ob.x, 0.0f, ob.y) + wallOffsetVec + randomPlacementVec;
                 GameObject crate = Instantiate(crateGO, crateLoc, Quaternion.identity);
             }
+        }
+    }
+
+    private void SpawnEnemies()
+    {
+        foreach (Room r in rooms)
+        {
+            int spawnRoomId = r.gridIds[(int)UnityEngine.Random.Range(0.0f, r.gridIds.Count)];
+            Vector2 cornerLoc = new Vector2(GridCellId2GridDim1(spawnRoomId) * roomSize, GridCellId2GridDim2(spawnRoomId) * roomSize);
+            float roomHalfSize = roomSize / 2.0f;
+            Vector3 spawnLoc = new Vector3(cornerLoc.x + roomHalfSize, 0.0f, cornerLoc.y + roomHalfSize);
+            Instantiate(eMouseGO, spawnLoc, Quaternion.identity);
         }
     }
 
